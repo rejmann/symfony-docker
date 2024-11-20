@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker compose exec mysql mysqlsh root@localhost --database="setup" --password=root --sql
