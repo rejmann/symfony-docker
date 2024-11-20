@@ -1,0 +1,82 @@
+#!/bin/bash
+
+function getHelp() {
+    echo 'Os parâmetros a seguir definirão quais arquivos considerar:
+    -d, --diff              Irá selecionar os arquivos marcados como editados no Git
+    -s, --staged            Irá selecionar os arquivos preparados no Git
+    -a, --all               Irá selecionar todos os arquivos nas pastas "src" e "tests"
+    --php                   Irá selecionar apenas arquivos PHP
+
+    --no-file-extensions     Retorna apenas os nomes dos arquivos (não funciona como filtro)'
+}
+
+ONLY_PHP=0
+ONLY_JS=0
+ONLY_SRC=0
+ONLY_TESTS=0
+GIT_DIFF=0
+GIT_STAGED=0
+ALL_FILES=0
+NO_FILE_EXTENSIONS=0
+
+for arg in "$@"; do
+    case "$arg" in
+        -d|--diff)
+            GIT_DIFF=1
+            ;;
+        -s|--staged)
+            GIT_STAGED=1
+            ;;
+        -a|--all)
+            ALL_FILES=1
+            ;;
+        --php)
+            ONLY_PHP=1
+            ;;
+        --js)
+            ONLY_JS=1
+            ;;
+        --src)
+            ONLY_SRC=1
+            ;;
+        --tests)
+            ONLY_TESTS=1
+            ;;
+        --no-file-extensions)
+            NO_FILE_EXTENSIONS=1
+            ;;
+        --help|-h)
+            getHelp
+            exit 0
+            ;;
+    esac
+done
+
+GREP_REGEXP="."
+[ $ONLY_PHP -eq 1 ] && GREP_REGEXP=".php$"
+[ $ONLY_JS -eq 1 ] && GREP_REGEXP=".js$"
+[ $ONLY_SRC -eq 1 ] && GREP_REGEXP="^src/"
+[ $ONLY_TESTS -eq 1 ] && GREP_REGEXP="^tests/"
+
+REPLACE="cat"
+[ $NO_FILE_EXTENSIONS -eq 1 ] && REPLACE='sed s/\..*//'
+
+[ $GIT_DIFF -eq 1 ] && {
+    FILES=$(git status --short | grep -E "^[MARC]" | cut -d '>' -f 2- | cut -c 2- | sed -e 's/^[[:space:]]*//' -e 's/^[MARC] //' | grep -E $GREP_REGEXP | $REPLACE)
+    echo "FILES=\"$FILES\""
+    exit 0
+}
+
+[ $GIT_STAGED -eq 1 ] && {
+    FILES=$(git diff --cached --name-only --diff-filter=ACMR HEAD | grep -E $GREP_REGEXP | $REPLACE)
+    echo "FILES=\"$FILES\""
+    exit 0
+}
+
+[ $ALL_FILES -eq 1 ] && {
+    FILES=$(git ls-files | grep -E "^(src|tests)" | grep -E $GREP_REGEXP | $REPLACE)
+    echo "FILES=\"$FILES\""
+    exit 0
+}
+
+getHelp

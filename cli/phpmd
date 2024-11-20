@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <file1> <file2> ..."
+  exit 1
+fi
+
+eval "$(./cli/get-git-files --php "$@")"
+
+FILES=$(echo $FILES | tr ' ' ',')
+if [ "$FILES" == "" ]; then
+  echo "Nenhum arquivo para verificar !"
+  exit 0
+fi
+
+# Substitua espaços por vírgulas
+FILES=${FILES// /,}
+
+config=phpmd.xml
+
+./bin/phpmd --minimumpriority 4 $FILES text $config | sed 's|/var/www/html/||g'
+
+exit ${PIPESTATUS[0]}
