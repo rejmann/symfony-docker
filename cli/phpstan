@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <file1> <file2> ..."
+  exit 1
+fi
+
+eval "$(./cli/get-git-files --php "$@")"
+
+if [ "$FILES" == "" ]; then
+  echo "Nenhum arquivo para verificar !"
+  exit 0
+fi
+
+echo $PARAMS | grep -Eq '\--no-progress' || echo "--- Running PHPStan"
+./bin/phpstan analyse -c phpstan.neon --autoload-file=vendor/autoload.php \
+    --error-format=raw --memory-limit 256M $FILES $PARAMS \
+    | sed 's|/var/www/html/||g' | grep -v -e '^$'
+exit ${PIPESTATUS[0]}

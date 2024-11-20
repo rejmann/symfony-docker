@@ -1,0 +1,19 @@
+#!/bin/bash
+
+FILES="composer.json composer.lock symfony.lock"
+FOLDERS=".git/hooks config templates vendor node_modules bin var var/cache var/log public src migrations assets tests"
+
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+
+for FOLDER in $FOLDERS; do
+    if [ ! -d $FOLDER ]; then
+        mkdir -p $FOLDER
+    fi
+
+    sudo chown -R $USER_ID:$GROUP_ID "$FOLDER"
+done
+
+chmod a+rw $FILES && \
+chmod -R a+rw $FOLDERS && \
+chmod -R a+x ./{cli,bin}
