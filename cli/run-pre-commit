@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -e -o pipefail
+
+# Obtendo a lista de arquivos modificados
+ARQUIVOS_MODIFICADOS=$(./cli/get-git-files --diff --php)
+
+# Função para executar a ferramenta fornecida com argumentos nos arquivos modificados
+run_tool() {
+  FERRAMENTA=$1
+  shift
+  SCRIPT="cli/$FERRAMENTA"
+
+  if [ -x "$SCRIPT" ]; then
+    echo "Executando $FERRAMENTA em arquivos modificados:"
+    cli/run-at-container $SCRIPT --diff "$@"
+  else
+    echo "$FERRAMENTA script não encontrado ou não executável: $SCRIPT"
+    exit 1
+  fi
+}
+
+# Verifique se há arquivos modificados antes de executar as ferramentas
+if [ -n "$ARQUIVOS_MODIFICADOS" ]; then
+  # Execute as ferramentas
+  run_tool php-cs-fixer --dry-run
+  run_tool phpstan
+  run_tool phpmd
+  cli/run-at-container cli/tests
+
+  # Se alguma das ferramentas falhar, impeça o commit
+  if [ $? -ne 0 ]; then
+    echo "As verificações de pre-commit falharam. Corrija os problemas relatados antes de confirmar."
+    exit 1
+  fi
+else
+  echo "Nenhum arquivo modificado encontrado. Ignorando a execução das ferramentas."
+fi
+
+exit 0
