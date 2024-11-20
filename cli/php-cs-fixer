@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <file1> <file2> ..."
+  exit 1
+fi
+
+eval "$(./cli/get-git-files --php "$@")"
+
+if [ "$FILES" == "" ]; then
+  echo "Nenhum arquivo para verificar !"
+  exit 0
+fi
+
+
+config=.php-cs-fixer.dist.php
+if [[ -f ".php-cs-fixer.php" ]]; then
+    config=.php-cs-fixer.php
+fi
+
+./bin/php-cs-fixer fix --config $config $PARAMS $FILES
+
+CS_RETURN="$?"
+if grep -Eq '\--format=gitlab' <<< ${PARAMS}; then
+    exit $CS_RETURN
+fi
+
+if [[ "4" = "${CS_RETURN}" ]] || [[ "8" = "${CS_RETURN}" ]]; then
+    echo ">> Existem arquivos precisando de ajuste, rode o make auto-fix-diff!"
+fi
+
+exit $CS_RETURN
